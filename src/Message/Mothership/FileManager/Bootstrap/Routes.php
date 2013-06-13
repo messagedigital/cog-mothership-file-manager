@@ -34,6 +34,7 @@ class Routes implements RoutesInterface
 
 		$router['files']->add('ms.cp.file_manager.restore', '/{fileID}/restore/{hash}', '::Controller:Detail#restore')
 			->setRequirement('fileID', '\d+')
-			->setMethod('GET');
+			->setMethod('GET')
+			->enableCsrf('hash');
 	}
 }
