@@ -26,6 +26,7 @@ class Detail extends \Message\Cog\Controller\Controller
 			'author' => $author,
 			'form' => $this->_getDetailForm($file),
 		);
+
 		return $this->render('::detail', $data);
 	}
 
@@ -38,8 +39,11 @@ class Detail extends \Message\Cog\Controller\Controller
 	{
 		// Load the file object
 		$file = $this->get('file_manager.file.loader')->getByID($fileID);
+
+		$form = $this->_getDetailForm($file);
+
 		// Load the changed data from the request
-		if ($edits = $this->get('request')->get('file')) {
+		if ($form->isValid() && ($edits = $this->get('request')->get('file'))) {
 			// Set the alt text
 			$file->altText = $edits['alt_text'];
 			// Turn the tags into an array and trim the values
@@ -47,10 +51,12 @@ class Detail extends \Message\Cog\Controller\Controller
 			// Save the file
 			if ($file = $this->get('file_manager.file.edit')->save($file)) {
 				$this->addFlash('success', $file->file->getBasename().' was updated successfully');
-			} else {
+			}
+			else {
 				$this->addFlash('error', $file->file->getBasename().' could not be updated.');
 			}
 		}
+
 		// Redirect the page to where is was
 		return $this->redirect($this->generateUrl('ms.cp.file_manager.detail',array('fileID' => $file->id)));
 	}
@@ -107,8 +113,8 @@ class Detail extends \Message\Cog\Controller\Controller
 				'tags'		=> implode(',', $file->tags),
 				'alt_text'	=> $file->altText,
 				));
-		$form->add('tags', 'textarea');
-		$form->add('alt_text', 'text');
+		$form->add('tags', 'textarea')->val()->optional();
+		$form->add('alt_text', 'text')->val()->optional();
 
 		return $form;
 	}

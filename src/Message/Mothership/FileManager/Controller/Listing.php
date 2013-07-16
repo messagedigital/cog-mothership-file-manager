@@ -16,33 +16,40 @@ class Listing extends \Message\Cog\Controller\Controller
 {
 	public function index()
 	{
-		return $this->render('::listing', array(
-			'files'       => $this->get('file_manager.file.loader')->getAll(),
-			'searchTerm'  => null,
-			'form'        => $this->_getUploadForm(),
-			'search_form' => $this->_getSearchForm(),
-		));
+		return $this->_renderSearchForm(
+			$this->get('file_manager.file.loader')->getAll()
+		);
 	}
 
 	public function searchRedirect()
 	{
-		if ($search = $this->get('request')->request->get('file_search')) {
-			return $this->redirect($this->generateURL('ms.cp.file_manager.search', array(
-				'term' => $search['term'],
-			)));
+		$valid = ($this->_getUploadForm()->isValid() && $this->_getSearchForm()->isValid());
+		if ($valid && ($search = $this->get('request')->request->get('file_search'))) {
+
+			return $this->search($search['term']);
 		}
 
-		return $this->redirect($this->generateURL('ms.cp.file_manager.listing'));
+		return $this->index();
 	}
 
 	public function search($term)
 	{
+		return $this->_renderSearchForm(
+			$this->get('file_manager.file.loader')->getBySearchTerm($term),
+			$term
+		);
+	}
+
+	protected function _renderSearchForm($files, $searchTerm = null, $uploadForm = null, $searchForm = null)
+	{
+		$uploadForm = $uploadForm ?: $this->_getUploadForm();
+		$searchForm = $searchForm ?: $this->_getSearchForm();
 
 		return $this->render('::listing', array(
-			'files'       => $this->get('file_manager.file.loader')->getBySearchTerm($term),
-			'searchTerm'  => $term,
-			'form'        => $this->_getUploadForm(),
-			'search_form' => $this->_getSearchForm(),
+			'files'         => $files,
+			'searchTerm'    => $searchTerm,
+			'form'          => $uploadForm,
+			'search_form'   => $searchForm
 		));
 	}
 
@@ -52,6 +59,7 @@ class Listing extends \Message\Cog\Controller\Controller
 			->setName('upload')
 			->setMethod('POST')
 			->setAction($this->generateUrl('ms.cp.file_manager.upload'));
+
 		$form->add('new_upload', 'file', 'upload an image', array('attr' => array('multiple' => 'multiple')));
 
 		return $form;
@@ -63,6 +71,7 @@ class Listing extends \Message\Cog\Controller\Controller
 			->setName('file_search')
 			->setMethod('POST')
 			->setAction($this->generateUrl('ms.cp.file_manager.search.forward'));
+
 		$form->add('term', 'search', 'Enter search term...');
 
 		return $form;
