@@ -42,5 +42,10 @@ class Routes implements RoutesInterface
 
 		$router['ms.cp.file_manager']->add('ms.cp.file_manager.modal.index', '/modal', '::Controller:Listing#index')
 			->setMethod('GET');
+
+		$router['ms.cp.file_manager']->add('ms.cp.file_manager.print', '/print', '::Controller:Printer#printPath')
+			->setRequirement('path', '.+');
+		$router['ms.cp.file_manager']->add('ms.cp.file_manager.print.file', '/{fileID}/print', '::Controller:Printer#printFile')
+			->setRequirement('fileID', '\d+');
 	}
 }
