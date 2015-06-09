@@ -3,6 +3,7 @@
 namespace Message\Mothership\FileManager\Bootstrap;
 
 use Message\Cog\Bootstrap\ServicesInterface;
+use Message\Mothership\FileManager;
 
 class Services implements ServicesInterface
 {
@@ -17,14 +18,15 @@ class Services implements ServicesInterface
 		});
 
 		$services['file_manager.file.loader'] = $services->factory(function($c) {
-			return new \Message\Mothership\FileManager\File\Loader(
+			return new FileManager\File\Loader(
 				'Locale class',
-				$c['db.query']
+				$c['db.query.builder.factory'],
+				$c['file_manager.tag.loader']
 			);
 		});
 
 		$services['file_manager.file.create'] = $services->factory(function($c) {
-			return new \Message\Mothership\FileManager\File\Create(
+			return new FileManager\File\Create(
 				$c['file_manager.file.loader'],
 				$c['db.query'],
 				$c['event.dispatcher'],
@@ -33,7 +35,7 @@ class Services implements ServicesInterface
 		});
 
 		$services['file_manager.file.edit'] = $services->factory(function($c) {
-			return new \Message\Mothership\FileManager\File\Edit(
+			return new FileManager\File\Edit(
 				$c['db.query'],
 				$c['event.dispatcher'],
 				$c['user.current']
@@ -41,15 +43,19 @@ class Services implements ServicesInterface
 		});
 
 		$services['file_manager.file.delete'] = $services->factory(function($c) {
-			return new \Message\Mothership\FileManager\File\Delete(
+			return new FileManager\File\Delete(
 				$c['db.query'],
 				$c['event.dispatcher'],
 				$c['user.current']
 			);
 		});
 
+		$services['file_manager.tag.loader'] = function($c) {
+			return new FileManager\File\TagLoader($c['db.query.builder.factory']);
+		};
+
 		$services->extend('field.collection', function($fields, $c) {
-			$fields->add(new \Message\Mothership\FileManager\FieldType\File(
+			$fields->add(new FileManager\FieldType\File(
 				$c['file_manager.file.loader'],
 				$c['translator']
 			));

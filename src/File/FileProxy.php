@@ -6,26 +6,22 @@ use Message\Cog\DB\Entity\EntityLoaderCollection;
 
 class FileProxy extends File
 {
-	protected $_loader;
+	protected $_tagLoader;
 	protected $_loaded = false;
 	
-	/**
-	 * @{inheritdoc}
-	 * @param EntityLoaderCollection $loaderCollection loaders
-	 */
-	public function __construct(Loader $loader)
+	public function __construct(TagLoader $loader)
 	{
-		$this->_loader = $loader;
+		$this->_tagLoader = $loader;
 		parent::__construct();
 	}
 
 	public function getTags()
 	{
 		if ($this->_loaded) {
-			return;
+			return parent::getTags();
 		}
 
-		$tags = $this->_loader->getTagsForFile($this);
+		$tags = $this->_tagLoader->getByFile($this);
 		
 		if ($tags !== false) {
 			$this->_tags = $this->_tags + $tags;

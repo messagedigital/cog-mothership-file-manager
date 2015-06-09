@@ -2,17 +2,38 @@
 
 namespace Message\Mothership\FileManager\File;
 
-use Message\Cog\DB\Query;
+use Message\User\User;
+use Message\Cog\DB;
 use Message\Cog\ValueObject\DateTimeImmutable;
 use Message\Cog\Filesystem\File as FileSystemFile;
 use Message\Cog\DB\Result;
 
 class Loader
 {
+	/**
+	 * @var
+	 */
+	private $_locale;
 
-	protected $_locale;
-	protected $_query;
-	protected $_returnAsArray;
+	/**
+	 * @var DB\QueryBuilderFactory
+	 */
+	private $_queryBuilderFactory;
+
+	/**
+	 * @var TagLoader
+	 */
+	private $_tagLoader;
+
+	/**
+	 * @var bool
+	 */
+	private $_returnAsArray;
+
+	/**
+	 * @var DB\QueryBuilder
+	 */
+	private $_queryBuilder;
 
 	/**
 	 * var to toggle the loading of deleted files
@@ -23,22 +44,34 @@ class Loader
 	 */
 	protected $_loadDeleted = false;
 
-	public function __construct(/*\Locale*/ $locale, Query $query)
+	public function __construct(/*\Locale*/ $locale, DB\QueryBuilderFactory $queryBuilderFactory, TagLoader $tagLoader)
 	{
-		$this->_locale = $locale;
-		$this->_query = $query;
+		$this->_locale              = $locale;
+		$this->_queryBuilderFactory = $queryBuilderFactory;
+		$this->_tagLoader           = $tagLoader;
 	}
 
 	/**
 	 * Return an array of, or singular File object
 	 *
-	 * @param  int|array $fileID
+	 * @param  int|array $fileIDs
 	 * @return array|File 	File object
 	 */
-	public function getByID($fileID)
+	public function getByID($fileIDs)
 	{
-		$this->_returnAsArray =  is_array($fileID);
-		return $this->_load($fileID);
+		if (!is_array($fileIDs)) {
+			$fileIDs = [$fileIDs];
+			$this->_returnAsArray = false;
+		} else {
+			$this->_returnAsArray = true;
+		}
+
+		$this->_setQueryBuilder();
+		$this->_queryBuilder
+			->where('file.file_id IN (?ji)', [$fileIDs])
+		;
+
+		return $this->_load();
 	}
 
 	/**
@@ -49,20 +82,58 @@ class Loader
 	 */
 	public function getByType($typeID)
 	{
-		$result = $this->_query->run('
-			SELECT
-				file_id
-			FROM
-				file
-			WHERE
-				type_id = ?i',
-			array(
-				$typeID,
-			)
-		);
+		$this->_setQueryBuilder();
+		$this->_queryBuilder
+			->where('file.type_id = ?i', [$typeID])
+		;
 
-		return count($result) ? $this->getByID($result->flatten()) : false;
+		$this->_returnAsArray = true;
 
+		return $this->_load();
+	}
+
+	/**
+	 * Load files with a given filename
+	 *
+	 * @param $filename
+	 * @return false|File
+	 */
+	public function getByFilename($filename)
+	{
+		if (!is_string($filename)) {
+			throw new \InvalidArgumentException('Filename must be a string, ' . gettype($filename) . ' given');
+		}
+
+		$this->_setQueryBuilder();
+		$this->_queryBuilder
+			->where('file.name = ?s', [$filename])
+		;
+
+		$this->_returnAsArray = false;
+
+		return $this->_load();
+	}
+
+	/**
+	 * Load files with an extension
+	 *
+	 * @param $ext
+	 * @return false|File
+	 */
+	public function getByExtension($ext)
+	{
+		if (!is_string($ext)) {
+			throw new \InvalidArgumentException('Extension must be a string, ' . gettype($ext) . ' given');
+		}
+
+		$this->_setQueryBuilder();
+		$this->_queryBuilder
+			->where('file.extension = ?s', [$ext])
+		;
+
+		$this->_returnAsArray = true;
+
+		return $this->_load();
 	}
 
 	/**
@@ -80,40 +151,24 @@ class Loader
 		// becasue we have to pass through an array to the sql query so we have to do it twice
 		$whereName = array();
 		$whereTag = array();
-		$whereTerms = array();
 
 		// Loop over the terms and add them to an array to implode in the query
-		foreach ($terms as $term) {
+		foreach ($terms as $key => $term) {
 			$whereName[]  = ' name LIKE ?s';
 			$whereTag[]   = ' tag_name LIKE ?s';
-			$whereTerms[] = trim($term);
-		}
-		// Duplciate and add the same array again and merge it to one, this is
-		// because we are looking at both the name and tag name in the query
-		$where = array_merge($whereTerms, $whereTerms);
-
-		// Add the wildcard modifiers to each search term
-		foreach ($where as $key => $value) {
-			$where[$key] = '%' . $value . '%';
+			$terms[$key] = '%' . trim($term) . '%';
 		}
 
-		$result = $this->_query->run('
-			SELECT
-				file.file_id
-			FROM
-				file
-			LEFT JOIN
-				file_tag USING (file_id)
-			WHERE
-				('.implode(' OR', $whereName).')
-				OR
-				('.implode(' OR', $whereTag).')',
-			$where
-		);
+		$this->_setQueryBuilder();
+		$this->_queryBuilder
+			->where('(' . implode(' OR ' . $whereName) . ')', $terms)
+			->where('(' . implode(' OR ' . $whereTag) . ')', $terms, false)
+		;
+
+		$this->_returnAsArray = true;
 
 		// Return the array of results.
-		return count($result) ? $this->getByID($result->flatten()) : false;
-
+		return $this->_load();
 	}
 
 	/**
@@ -123,37 +178,28 @@ class Loader
 	 */
 	public function getAll()
 	{
-		$result = $this->_query->run('
-			SELECT
-				file_id
-			FROM
-				file
-		');
+		$this->_setQueryBuilder();
 
-		return count($result) ? $this->getByID($result->flatten()) : false;
+		return $this->_load();
 
 	}
 
+	/**
+	 * @deprecated This method does nothing and will need to be removed.
+	 */
 	public function getByUnused()
 	{
 
 	}
 
-	public function getByUser(\User $user)
+	public function getByUser(User $user)
 	{
-		$result = $this->_query->run('
-			SELECT
-				file_id
-			FROM
-				file
-			WHERE
-				created_by = ?i',
-			array(
-				$user->id
-			)
-		);
+		$this->_setQueryBuilder();
+		$this->_queryBuilder
+			->where('file.created_by = ?i', [$user->id])
+		;
 
-		return count($result) ? $this->getByID($result->flatten()) : false;
+		return $this->_load();
 
 	}
 
@@ -166,60 +212,75 @@ class Loader
 	public function includeDeleted($bool)
 	{
 		$this->_loadDeleted = $bool;
+
 		return $this;
 	}
 	/**
+	 * @deprecated   Do not load tags from the file loader, use the TagLoader instead
+	 *
 	 * Gets the tags for a file
 	 * @param  File      $file file to load tags for
 	 * @return array     tags for file as an array
 	 */
 	public function getTagsForFile(File $file)
 	{
-		return $this->_loadTags($file);
+		return $this->_tagLoader->getByFile($file);
+	}
+
+	/**
+	 * Sets the query builder with the appropriate SELECT and FROM statement
+	 */
+	private function _setQueryBuilder()
+	{
+		$this->_queryBuilder = $this->_queryBuilderFactory->getQueryBuilder()
+			->select([
+				'file.file_id AS id',
+				'file.url AS url',
+				'file.name AS `name`',
+				'file.extension AS extension',
+				'file.file_size AS fileSize',
+				'file.created_at AS createdAt',
+				'file.created_by AS createdBy',
+				'file.updated_at AS updatedAt',
+				'file.updated_by AS updatedBy',
+				'file.deleted_at AS deletedAt',
+				'file.deleted_by AS deletedBy',
+				'file.type_id AS typeID',
+				'file.checksum AS checksum',
+				'file.preview_url AS previewUrl',
+				'file.dimension_x AS dimensionX',
+				'file.dimension_y AS dimensionY',
+				'file.alt_text AS altText',
+				'file.duration AS duration',
+			])
+			->from('file')
+			->orderBy('file.created_at DESC')
+		;
+
+		if (!$this->_loadDeleted) {
+			$this->_queryBuilder
+				->where('file.deleted_at IS NULL');
+		}
 	}
 
 	/**
 	 * Loads the file data out of the table and loads in into a File Object.
 	 *
-	 * @param  int|array $fileID fileId of the file to be loaded
-	 *
 	 * @return File|false return instance of the file is loaded else false
 	 */
-	protected function _load($fileID)
+	protected function _load()
 	{
-		$fileIDs = (array) $fileID;
+		if (null === $this->_queryBuilder) {
+			throw new \LogicException('Cannot load files, query builder not set');
+		}
 
-		$result = $this->_query->run('
-			SELECT
-				file.file_id AS id,
-				file.url AS url,
-				file.name AS name,
-				file.extension AS extension,
-				file.file_size AS fileSize,
-				file.created_at AS createdAt,
-				file.created_by AS createdBy,
-				file.updated_at AS updatedAt,
-				file.updated_by AS updatedBy,
-				file.deleted_at AS deletedAt,
-				file.deleted_by AS deletedBy,
-				file.type_id AS typeID,
-				file.checksum AS checksum,
-				file.preview_url AS previewUrl,
-				file.dimension_x AS dimensionX,
-				file.dimension_y AS dimensionY,
-				file.alt_text AS altText,
-				file.duration AS duration
-			FROM
-				file
-			WHERE
-				file.file_id IN (?ij)
-			ORDER BY
-				created_at DESC
-		', array($fileIDs));
+		$result = $this->_queryBuilder->getQuery()->run();
 
 		if (count($result)) {
 			return $this->_loadFile($result);
 		}
+
+		$this->_queryBuilder = null;
 
 		return false;
 	}
@@ -235,16 +296,10 @@ class Loader
 	{
 		$files = $results->bindTo(
 			'\Message\Mothership\FileManager\File\FileProxy',
-			[$this]
+			[$this->_tagLoader]
 		);
 
 		foreach ($results as $key => $result) {
-
-			// Remove the file if it is deleted unless we are loading deleted files
-			if ($result->deletedAt && !$this->_loadDeleted) {
-				unset($files[$key]);
-				continue;
-			}
 
 			$files[$key]->authorship->create(new DateTimeImmutable('@'.$result->createdAt), $result->createdBy);
 
@@ -262,28 +317,18 @@ class Loader
 			$files[$key]->typeID = (int) $files[$key]->typeID;
 		}
 
-		return count($files) == 1 && !$this->_returnAsArray ? $files[0] : $files;
+		return count($files) == 1 && !$this->_returnAsArray ? array_shift($files) : $files;
 	}
 
+	/**
+	 * @deprecated  Do not load tags from the file loader, use the tag loader directly instead
+	 *
+	 * @param File $file
+	 * @return array
+	 */
 	protected function _loadTags(File $file)
 	{
-		$tags = array();
-
-		$result = $this->_query->run('
-			SELECT
-				file_tag.tag_name
-			FROM
-				file_tag
-			WHERE
-				file_tag.file_id = ?i', array($file->id)
-		);
-
-		if (count($result)) {
-			$tags = $result->flatten();
-		}
-
-		return $tags;
-
+		return $this->_tagLoader->getByFile($file);
 	}
 
 }
