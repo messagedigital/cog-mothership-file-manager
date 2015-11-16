@@ -1,33 +1,50 @@
-{% extends 'Message:Mothership:ControlPanel::_templates/left_sidebar' %}
+{% extends 'Message:Mothership:ControlPanel::_templates/cp' %}
 
-{% block sidebar %}
-	<div class="search files">
-	{{ form_start(search_form) }}
-		{{ form_row(search_form.term, { 'attr': {'placeholder': 'Search files...' } }) }}
-		<button type="submit">Search</button>
-	{{ form_end(search_form) }}
-	</div>
-	{#
-	<div class="filter-by">
-		{{ form_start(filter_sort_form) }}
-			{{ form_row(filter_sort_form.sort) }}
-			{{ form_row(filter_sort_form.filter) }}
-		{{ form_end(filter_sort_form) }}
-	</div>
-	#}
-	<div class="file-upload">
-	{{ form_start(form) }}
-		{{ form_widget(form.new_upload, { 'attr': { 'multiple': 'multiple' }, 'full_name': form.new_upload.get('full_name') ~ 'upload[new_upload][]' }) }}
-		<button type="submit" class="button small upload">Upload a new file</button>
-	{{ form_end(form) }}
-	</div>
+{% block stylesheets %}
+	{{ parent() }}
+	{% stylesheets
+		'@Message:Mothership:FileManager::resources/assets/css/filemanager.css'
+
+		output='/assets/css/ms_filemanager.css'
+		filter='csscogulerewrite,?cssmin'
+	%}
+		<link rel="stylesheet" href="{{ asset_url }}">
+	{% endstylesheets %}
+{% endblock %}
+
+{% block javascripts %}
+	{{ parent() }}
+	{% javascripts
+		'@Message:Mothership:FileManager::resources/assets/js/filemanager.js'
+
+		output='/assets/js/ms_filemanager.js'
+
+	%}
+		{# filter='?jsmin' #}
+		<script src="{{ asset_url }}"></script>
+	{% endjavascripts %}
 {% endblock %}
 
 {% block main %}
 	<hgroup class="title">
 		<h1>File manager</h1>
+		<div class="controls">
+			<div class="file-upload">
+				{{ form_start(form) }}
+					{{ form_widget(form.new_upload, { 'attr': { 'multiple': 'multiple' }, 'full_name': form.new_upload.get('full_name') ~ 'upload[new_upload][]' }) }}
+					<button class="button small upload">Upload a new file</button>
+				{{ form_end(form) }}
+
+			</div>
+		</div>
 	</hgroup>
-	<div class="container-content file-manager">
+	<div class="container-content">
+		<div class="search">
+			{{ form_start(search_form) }}
+				{{ form_row(search_form.term, { 'attr': {'placeholder': 'Search files...' } }) }}
+				<button type="submit">Search</button>
+			{{ form_end(search_form) }}
+		</div>
 		<div class="listing">
 		{% for file in files %}
 			<a href="{{ url('ms.cp.file_manager.detail', {fileID: file.id}) }}" data-live>

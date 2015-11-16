@@ -1,68 +1,56 @@
-{% extends 'Message:Mothership:ControlPanel::_templates/left_sidebar' %}
-
-{% block sidebar %}
-	<a href="{{ url('ms.cp.file_manager.listing') }}" class="back" data-live>Back to file list</a>
-{% endblock %}
+{% extends 'Message:Mothership:ControlPanel::_templates/cp' %}
 
 {% block main %}
 	<hgroup class="title">
 		<h1>{{ file.name }} <span>{{ ('ms.file_manager.type.' ~ file.typeID)|trans }}</span></h1>
 	</hgroup>
-	<div class="container-content file-manager tall">
-		<div class="dual-column">
-			<div class="content">
-				<div class="column">
-					{% if file.isTypeImage() %}
-						{{ getResizedImage(file, null, 500, {'class': 'file'}) }}
-					{% else %}
-						<img src="/cogules/Message:Mothership:ControlPanel/images/document.gif" alt="{{ file.altText }}" class="file" />
+	<div class="container-content">
+		{% if file.isTypeImage() %}
+			{{ getResizedImage(file, null, 500, {'class': 'file'}) }}
+		{% else %}
+			<img src="/cogules/Message:Mothership:ControlPanel/images/document.gif" alt="{{ file.altText }}" class="file" />
+		{% endif %}
+		<section>
+			<h2>Additional information</h2>
+			<table>
+				<tbody>
+					<tr>
+						<td><strong>{{ 'ms.file_manager.detail.labels.type'|trans }}</strong></td>
+						<td>{{ ('ms.file_manager.type.' ~ file.typeID)|trans }}</td>
+					</tr>
+					<tr>
+						<td><strong>{{ 'ms.file_manager.detail.labels.size'|trans }}</strong></td>
+						<td>{{ file.fileSize }} bytes</td>
+					</tr>
+					{% if file.isTypeImage %}
+					<tr>
+						<td><strong>{{ 'ms.file_manager.detail.labels.dimensions'|trans }}</strong></td>
+						<td>{{ file.dimensionX }} x {{ file.dimensionY }}</td>
+					</tr>
 					{% endif %}
-				</div>
-				<div class="column">
-					<div class="section">
-						{{ form_start(form) }}
-							{{ form_row(form.alt_text) }}
-							{{ form_row(form.tags) }}
-							<button name="update" type="submit" value="Submit" id="save-content" class="button small save">Save changes</button>
-						{{ form_end(form) }}
-					</div>
-					<div class="section">
-						<h2>Additional information</h2>
-						<table>
-							<tbody>
-								<tr>
-									<td><strong>{{ 'ms.file_manager.detail.labels.type'|trans }}</strong></td>
-									<td>{{ ('ms.file_manager.type.' ~ file.typeID)|trans }}</td>
-								</tr>
-								<tr>
-									<td><strong>{{ 'ms.file_manager.detail.labels.size'|trans }}</strong></td>
-									<td>{{ file.fileSize }} bytes</td>
-								</tr>
-								{% if file.isTypeImage %}
-								<tr>
-									<td><strong>{{ 'ms.file_manager.detail.labels.dimensions'|trans }}</strong></td>
-									<td>{{ file.dimensionX }} x {{ file.dimensionY }}</td>
-								</tr>
-								{% endif %}
-								<tr>
-									<td><strong>{{ 'ms.file_manager.detail.labels.author'|trans }}</strong></td>
-									<td>{{ file.authorship.createdUser.name }} at {{ file.authorship.createdAt|date }}</td>
-								</tr>
-								{% if file.authorship.updatedAt is not empty %}
-									<tr>
-										<td><strong>{{ 'ms.file_manager.detail.labels.edit-by'|trans }}</strong></td>
-										<td>{{ file.authorship.updatedUser.name }} at {{ file.authorship.updatedAt|date }}</td>
-									</tr>
-								{% endif %}
-							</tbody>
-						</table>
-					</div>
-				</div>
-			</div>
-		</div>
-		<form action="{{ url('ms.cp.file_manager.delete', {fileID: file.id}) }}" method="post" data-confirm="{{ 'ms.file_manager.detail.delete.confirm'|trans }}" >
-			<input type="hidden" name="_method" value="DELETE">
-			<button name="delete[delete]" value="delete" id="delete" type="submit" class="button small delete">{{ 'ms.file_manager.detail.buttons.delete'|trans }}</button>
-		</form>
+					<tr>
+						<td><strong>{{ 'ms.file_manager.detail.labels.author'|trans }}</strong></td>
+						<td>{{ file.authorship.createdUser.name }} at {{ file.authorship.createdAt|date }}</td>
+					</tr>
+					{% if file.authorship.updatedAt is not empty %}
+						<tr>
+							<td><strong>{{ 'ms.file_manager.detail.labels.edit-by'|trans }}</strong></td>
+							<td>{{ file.authorship.updatedUser.name }} at {{ file.authorship.updatedAt|date }}</td>
+						</tr>
+					{% endif %}
+				</tbody>
+			</table>
+
+			{{ form_start(form) }}
+				{{ form_row(form.alt_text) }}
+				{{ form_row(form.tags) }}
+				<button name="update" type="submit" value="Submit" id="save-content" class="button small save">Save changes</button>
+			{{ form_end(form) }}
+
+			<form action="{{ url('ms.cp.file_manager.delete', {fileID: file.id}) }}" method="post" data-confirm="{{ 'ms.file_manager.detail.delete.confirm'|trans }}" >
+				<input type="hidden" name="_method" value="DELETE">
+				<button name="delete[delete]" value="delete" id="delete" type="submit" class="button small delete">{{ 'ms.file_manager.detail.buttons.delete'|trans }}</button>
+			</form>
+		</section>	
 	</div>
 {% endblock %}

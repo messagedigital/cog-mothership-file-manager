@@ -1,0 +1,83 @@
+/* ======================================================= */
+/*                                                         */
+/*                                                         */
+/*    Mothership                                           */
+/*                                                         */
+/*                                                         */
+/* ======================================================= */
+/*
+/*
+/*    http://mothership.ec
+/*
+/*    File Manager - Style Style Sheet v1.0
+/*
+/*
+/* ======================================================= */
+
+.file-upload {
+	position: relative;
+	float: left;
+}
+
+.file-upload #upload_new_upload {
+	display: none;
+}
+
+.listing {
+	clear: both;
+}
+
+.listing a,
+.listing .product-image {
+	position: relative;
+	display: inline-block;
+	margin: 0 23px 23px 0;
+	width: 200px;
+	height: 200px;
+	text-decoration: none;
+}
+
+.listing img {
+	width: 200px;
+	height: 200px;
+	background: #FFF;
+}
+
+.file-overlay {
+	position: absolute;
+	bottom: 0px;
+	z-index: 99px;
+	overflow: hidden;
+	padding: 10px 0 10px 10px;
+	width: 200px;
+	background: rgba(0,0,0,0.5);
+	color: #eee;
+}
+
+
+.file {
+	position: absolute;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	overflow: auto;
+	margin: auto;
+	padding: 0;
+	max-width: 500px;
+	width: auto;
+	height: auto;
+	border: 1px solid #CCC;
+	-webkit-box-shadow: 0 1px 6px rgba(000,000,000,0.1);
+	-moz-box-shadow: 0 1px 6px rgba(000,000,000,0.1);
+	box-shadow: 0 1px 6px rgba(000,000,000,0.1);
+}
+
+.file-manager .button.delete {
+	position: fixed;
+	top: 87px;
+	right: 151px;
+	z-index: 12;
+	display: inline-block;
+	margin-right: 25px;
+}
